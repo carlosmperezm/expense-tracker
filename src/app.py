@@ -1,7 +1,8 @@
-from typing import List, Any
+from typing import List, Any, Iterable
 from argparse import ArgumentParser
 from datetime import datetime
 import csv
+import os
 
 FILE_NAME: str = "expenses.csv"
 
@@ -21,11 +22,12 @@ class Expense:
 
 def read_csv(file_name: str = FILE_NAME) -> List:
     existing_data: List = []
+    data: List = []
     try:
         with open(file_name, mode="r", newline="") as file:
             reader = csv.reader(file)
             header = next(reader)
-            data: List = [row for row in reader]
+            data = [row for row in reader]
 
     except FileNotFoundError:
         print("File not found. Creating a new one.")
@@ -33,24 +35,28 @@ def read_csv(file_name: str = FILE_NAME) -> List:
     return data
 
 
-def write_csv(expense: Expense, file_name: str = FILE_NAME) -> bool:
-    data: List = read_csv()
+def write_csv(expense: Expense | Any, file_name: str = FILE_NAME) -> bool:
+    data: List = []
+    data = read_csv()
+    last_id: int = 0
 
     with open(file_name, mode="w", newline="") as file:
         writer = csv.writer(file)
-        writer.writerow(["Description", "Amount", "Date"])
+        writer.writerow(["id", "Description", "Amount", "Date"])
 
         if len(data) > 0:
             for row in data:
+                last_id = int(row[0])
                 writer.writerow(row)
-        writer.writerow([expense.descripton, expense.amount, expense.date])
+
+        last_id += 1
+        if isinstance(expense, Expense):
+            writer.writerow([last_id, expense.descripton, expense.amount, expense.date])
+        elif isinstance(expense, Iterable):
+            writer.writerow(expense)
 
     last_row = read_csv()[-1]
-    return (
-        last_row[0] == expense.descripton
-        and last_row[1] == str(expense.amount)
-        and last_row[2] == str(expense.date)
-    )
+    return last_row[0] == str(last_id)
 
 
 def add_expense(description: str, amount: float) -> None:
@@ -58,10 +64,19 @@ def add_expense(description: str, amount: float) -> None:
     print(write_csv(expense))
 
 
-def update_expense(id: int) -> None: ...
+def update_expense(id: int, expense) -> None:
+    pass
 
 
-def delete_expense(id: int) -> None: ...
+def delete_expense(id: int) -> None:
+    data: List = read_csv()
+
+    del data[id - 1]
+
+    os.remove(FILE_NAME)
+
+    for row in data:
+        write_csv(row)
 
 
 def all_expenses() -> List: ...
@@ -93,7 +108,7 @@ def main() -> None:
         "delete", help="Delete a extisting expense"
     )
     parser_delete.add_argument(
-        "-id", help="Provide an id in order to delete the correct expense"
+        "-id", type=int, help="Provide an id in order to delete the correct expense"
     )
 
     parser_list: ArgumentParser = subparser.add_parser(
@@ -115,6 +130,8 @@ def main() -> None:
     elif args.command == "list":
         for row in read_csv():
             print(row)
+    elif args.command == "delete":
+        delete_expense(args.id)
     else:
         parser.print_help()
 
