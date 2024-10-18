@@ -1,7 +1,7 @@
 # expense-tracker
 This tiny project from roadmap.sh backend projects 
 
-Sample solution for the [Expense Tracker](https://roadmap.sh/projects/task-tracker) from [roadmap.sh](https://roadmap.sh)
+Sample solution for the [Expense Tracker](https://roadmap.sh/projects/expense-tracker) from [roadmap.sh](https://roadmap.sh)
 
 This little app basically allows you to track your expenses:
 
