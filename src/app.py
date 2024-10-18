@@ -98,7 +98,17 @@ def all_expenses() -> None:
         print(row)
 
 
-def summary_expenses(month: int = None, year: int = None) -> List: ...
+def summary_expenses(month: int | None = None) -> float:
+    total: float = 0
+
+    for row in read_csv():
+        date_object = datetime.strptime(row[3], "%Y-%m-%d %H:%M:%S.%f")
+
+        if int(month) == date_object.month:
+            print(row)
+            total += float(row[2])
+
+    return total
 
 
 def main() -> None:
@@ -107,10 +117,10 @@ def main() -> None:
 
     parser_add: ArgumentParser = subparser.add_parser("add", help="Add new expense")
     parser_add.add_argument(
-        "--description", required=True, help="Set a description for this expense"
+        "-description", required=True, help="Set a description for this expense"
     )
     parser_add.add_argument(
-        "--amount", type=float, required=True, help="Set a amount for this expense"
+        "-amount", type=float, required=True, help="Set a amount for this expense"
     )
 
     parser_update: ArgumentParser = subparser.add_parser(
@@ -126,7 +136,7 @@ def main() -> None:
         "delete", help="Delete a extisting expense"
     )
     parser_delete.add_argument(
-        "--id", type=int, help="Provide an id in order to delete the correct expense"
+        "-id", type=int, help="Provide an id in order to delete the correct expense"
     )
 
     parser_list: ArgumentParser = subparser.add_parser(
@@ -136,8 +146,7 @@ def main() -> None:
     parser_summary: ArgumentParser = subparser.add_parser(
         "summary", help="Show a summary of all the expenses"
     )
-    parser_update.add_argument("-month", help="Provide a month to filter the summary")
-    parser_update.add_argument("-year", help="Provide a year to filter the summary")
+    parser_summary.add_argument("-month", help="Provide a month to filter the summary")
 
     args = parser.parse_args()
 
@@ -151,6 +160,8 @@ def main() -> None:
         delete_expense(args.id)
     elif args.command == "update":
         update_expense(args.id)
+    elif args.command == "summary":
+        print("Total expenses: ", summary_expenses(month=args.month))
     else:
         parser.print_help()
 
