@@ -64,8 +64,22 @@ def add_expense(description: str, amount: float) -> None:
     print(write_csv(expense))
 
 
-def update_expense(id: int, expense) -> None:
-    pass
+def update_expense(id: int) -> None:
+
+    updated: str = "Expense Not Found"
+
+    data: List = read_csv()
+    os.remove(FILE_NAME)
+
+    for row in data:
+        if row[0] == id:
+            description = input("Description: ")
+            amount = float(input("Amount: "))
+            write_csv([row[0], description, amount, row[3]])
+            updated = "Updated succefully"
+        else:
+            write_csv(row)
+    print(updated)
 
 
 def delete_expense(id: int) -> None:
@@ -79,7 +93,9 @@ def delete_expense(id: int) -> None:
         write_csv(row)
 
 
-def all_expenses() -> List: ...
+def all_expenses() -> None:
+    for row in read_csv():
+        print(row)
 
 
 def summary_expenses(month: int = None, year: int = None) -> List: ...
@@ -101,14 +117,16 @@ def main() -> None:
         "update", help="Update a extisting expense"
     )
     parser_update.add_argument(
-        "-id", help="Provide an id in order to update the correct expense"
+        "-id",
+        required=True,
+        help="Provide an id in order to update the correct expense",
     )
 
     parser_delete: ArgumentParser = subparser.add_parser(
         "delete", help="Delete a extisting expense"
     )
     parser_delete.add_argument(
-        "-id", type=int, help="Provide an id in order to delete the correct expense"
+        "--id", type=int, help="Provide an id in order to delete the correct expense"
     )
 
     parser_list: ArgumentParser = subparser.add_parser(
@@ -128,10 +146,11 @@ def main() -> None:
         add_expense(args.description, args.amount)
 
     elif args.command == "list":
-        for row in read_csv():
-            print(row)
+        all_expenses()
     elif args.command == "delete":
         delete_expense(args.id)
+    elif args.command == "update":
+        update_expense(args.id)
     else:
         parser.print_help()
 
