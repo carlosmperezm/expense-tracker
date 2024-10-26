@@ -21,6 +21,10 @@ class Expense:
         )
 
 
+class User:
+    budget: float = 0.0
+
+
 def read_csv(file_name: str = FILE_NAME) -> List:
     existing_data: List = []
     data: List = []
@@ -36,10 +40,32 @@ def read_csv(file_name: str = FILE_NAME) -> List:
     return data
 
 
+def validate_budget(budget: float, total_expenses) -> bool:
+    if budget < total_expenses:
+        print("!!🚨 ALERT 🚨!! Your are exceding your budget.")
+        print(f"Budget:{budget} < total expenses:{total_expenses}")
+
+        if input("Is that ok? (y/n)").lower() != "y":
+            print("Aborting...")
+            return False
+
+    return True
+
+
+def read_budget(file_path: str = "user.txt") -> float:
+    try:
+        with open("user.txt", "r") as user_file:
+            return float(user_file.readline())
+    except FileNotFoundError:
+        return 0.0
+
+
 def write_csv(expense: Expense | Any, file_name: str = FILE_NAME) -> bool:
     data: List = []
     data = read_csv()
     last_id: int = 0
+    budget: float = read_budget("user.txt")
+    total_expenses: float = summary_expenses()
 
     with open(file_name, mode="w", newline="") as file:
         writer = csv.writer(file)
@@ -51,7 +77,11 @@ def write_csv(expense: Expense | Any, file_name: str = FILE_NAME) -> bool:
                 writer.writerow(row)
 
         last_id += 1
-        if isinstance(expense, Expense):
+
+        if isinstance(expense, Expense) and validate_budget(
+            budget, total_expenses + expense.amount
+        ):
+
             writer.writerow(
                 [
                     last_id,
@@ -61,7 +91,9 @@ def write_csv(expense: Expense | Any, file_name: str = FILE_NAME) -> bool:
                     expense.category,
                 ]
             )
-        elif isinstance(expense, Iterable):
+        elif isinstance(expense, Iterable) and validate_budget(
+            budget, total_expenses + expense[2]
+        ):
             writer.writerow(expense)
 
     last_row = read_csv()[-1]
@@ -114,12 +146,32 @@ def summary_expenses(month: int | None = None, category: str | None = None) -> f
         date_object = datetime.strptime(row[3], "%Y-%m-%d %H:%M:%S.%f")
 
         if month and int(month) == date_object.month:
-            print(row)
             total += float(row[2])
         elif category and category == row[4]:
             total += float(row[2])
+        else:
+            total += float(row[2])
 
     return total
+
+
+def budget(new_budget: float) -> float:
+    file_path: str = "user.txt"
+
+    if new_budget is None:
+        return read_budget(file_path)
+
+    try:
+        os.remove(file_path)
+    except FileNotFoundError:
+        pass
+
+    User.budget = new_budget
+
+    with open(file_path, "w") as user_file:
+        user_file.write(str(User.budget))
+
+    return User.budget
 
 
 def main() -> None:
@@ -164,6 +216,10 @@ def main() -> None:
     parser_summary.add_argument(
         "-category", help="Provide a category to filter the summary"
     )
+    parser_budget: ArgumentParser = subparser.add_parser("budget", help="Set a budget")
+    parser_budget.add_argument(
+        "-new", type=float, help="Show the current status of your budget"
+    )
 
     args = parser.parse_args()
 
@@ -182,6 +238,8 @@ def main() -> None:
             "Total expenses: ",
             summary_expenses(month=args.month, category=args.category),
         )
+    elif args.command == "budget":
+        print(budget(args.new))
     else:
         parser.print_help()
 
