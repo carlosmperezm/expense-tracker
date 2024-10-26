@@ -9,10 +9,11 @@ FILE_NAME: str = "expenses.csv"
 
 class Expense:
 
-    def __init__(self, description: str, amount: float) -> None:
+    def __init__(self, description: str, amount: float, category: str) -> None:
         self.descripton = description
         self.amount = amount
         self.date = datetime.now()
+        self.category = category
 
     def __str__(self) -> str:
         return (
@@ -42,7 +43,7 @@ def write_csv(expense: Expense | Any, file_name: str = FILE_NAME) -> bool:
 
     with open(file_name, mode="w", newline="") as file:
         writer = csv.writer(file)
-        writer.writerow(["id", "Description", "Amount", "Date"])
+        writer.writerow(["id", "Description", "Amount", "Date", "Category"])
 
         if len(data) > 0:
             for row in data:
@@ -51,7 +52,15 @@ def write_csv(expense: Expense | Any, file_name: str = FILE_NAME) -> bool:
 
         last_id += 1
         if isinstance(expense, Expense):
-            writer.writerow([last_id, expense.descripton, expense.amount, expense.date])
+            writer.writerow(
+                [
+                    last_id,
+                    expense.descripton,
+                    expense.amount,
+                    expense.date,
+                    expense.category,
+                ]
+            )
         elif isinstance(expense, Iterable):
             writer.writerow(expense)
 
@@ -59,8 +68,8 @@ def write_csv(expense: Expense | Any, file_name: str = FILE_NAME) -> bool:
     return last_row[0] == str(last_id)
 
 
-def add_expense(description: str, amount: float) -> None:
-    expense = Expense(description, amount)
+def add_expense(description: str, amount: float, category: str) -> None:
+    expense = Expense(description, amount, category)
     print(write_csv(expense))
 
 
@@ -75,7 +84,7 @@ def update_expense(id: int) -> None:
         if row[0] == id:
             description = input("Description: ")
             amount = float(input("Amount: "))
-            write_csv([row[0], description, amount, row[3]])
+            write_csv([row[0], description, amount, row[3], row[4]])
             updated = "Updated succefully"
         else:
             write_csv(row)
@@ -98,14 +107,16 @@ def all_expenses() -> None:
         print(row)
 
 
-def summary_expenses(month: int | None = None) -> float:
+def summary_expenses(month: int | None = None, category: str | None = None) -> float:
     total: float = 0
 
     for row in read_csv():
         date_object = datetime.strptime(row[3], "%Y-%m-%d %H:%M:%S.%f")
 
-        if int(month) == date_object.month:
+        if month and int(month) == date_object.month:
             print(row)
+            total += float(row[2])
+        elif category and category == row[4]:
             total += float(row[2])
 
     return total
@@ -121,6 +132,9 @@ def main() -> None:
     )
     parser_add.add_argument(
         "-amount", type=float, required=True, help="Set a amount for this expense"
+    )
+    parser_add.add_argument(
+        "-category", required=True, help="Set a category for this product"
     )
 
     parser_update: ArgumentParser = subparser.add_parser(
@@ -147,12 +161,15 @@ def main() -> None:
         "summary", help="Show a summary of all the expenses"
     )
     parser_summary.add_argument("-month", help="Provide a month to filter the summary")
+    parser_summary.add_argument(
+        "-category", help="Provide a category to filter the summary"
+    )
 
     args = parser.parse_args()
 
     if args.command == "add":
         print(f"Adding expense: {args.description} for ${args.amount}")
-        add_expense(args.description, args.amount)
+        add_expense(args.description, args.amount, args.category)
 
     elif args.command == "list":
         all_expenses()
@@ -161,7 +178,10 @@ def main() -> None:
     elif args.command == "update":
         update_expense(args.id)
     elif args.command == "summary":
-        print("Total expenses: ", summary_expenses(month=args.month))
+        print(
+            "Total expenses: ",
+            summary_expenses(month=args.month, category=args.category),
+        )
     else:
         parser.print_help()
 
